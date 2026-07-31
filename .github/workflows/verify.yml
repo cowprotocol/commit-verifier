@@ -1,7 +1,7 @@
 name: verify commit signatures 🕵🏻‍♂️
 
 on:
-  workflow_call: {}
+  pull_request:
 
 permissions: {}
 
