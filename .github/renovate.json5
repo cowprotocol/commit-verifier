@@ -1,0 +1,21 @@
+{
+  $schema: "https://docs.renovatebot.com/renovate-schema.json",
+  enabledManagers: ["github-actions"],
+  // PR titles: `deps(<action>): ...`
+  semanticCommits: "enabled",
+  semanticCommitType: "deps",
+  packageRules: [
+    {
+      matchManagers: ["github-actions"],
+      schedule: ["on monday"],
+      // skip fresh releases: may be unstable or compromised
+      minimumReleaseAge: "14 days",
+      // semver-coerced so short tags (v3, v1.7) still parse; pin to full SHA, tag as trailing comment
+      versioning: "semver-coerced",
+      pinDigests: true,
+      separateMajorMinor: false,
+      semanticCommitScope: "{{depName}}",
+      commitMessageTopic: "{{depName}}",
+    },
+  ],
+}
