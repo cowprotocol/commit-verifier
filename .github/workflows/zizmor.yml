@@ -1,0 +1,74 @@
+name: zizmor
+
+on:
+  pull_request:
+    paths:
+      - ".github/**"
+  push:
+    branches: [main]
+    paths:
+      - ".github/**"
+
+permissions: {}
+
+jobs:
+  zizmor:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      pull-requests: write # sticky summary comment
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          persist-credentials: false
+
+      # fails on findings; annotations cap at 10, the PR comment carries the full list
+      # advanced-security off: no GHAS on this repo, SARIF upload would 403
+      - name: Run zizmor
+        uses: zizmorcore/zizmor-action@6fc4b006235f201fdab3722e17240ab420d580e5 # v0.6.1
+        with:
+          version: "1.28.0"
+          advanced-security: false
+          annotations: true
+
+      # re-run via docker for JSON output; the action only emits SARIF/annotations
+      - name: Generate summary
+        if: always() && github.event_name == 'pull_request'
+        env:
+          GH_TOKEN: ${{ github.token }} # online audits, same as the action run
+        run: |
+          rc=0
+          docker run --rm -e GH_TOKEN -v "$PWD:/src" ghcr.io/zizmorcore/zizmor:1.28.0@sha256:8e6b3e4fb74d1aa5d23e83ea369f386c66eced0d1fb944d32cd8b2aac100b00d \
+            --format=json /src > findings.json || rc=$?
+          # exit codes 10-14 = findings; anything else is a real error
+          if [ "$rc" -ne 0 ] && { [ "$rc" -lt 10 ] || [ "$rc" -gt 14 ]; }; then exit "$rc"; fi
+
+          cat > summary.jq <<'JQ'
+          def rank: {"High": 0, "Medium": 1, "Low": 2, "Informational": 3, "Unknown": 4}[.] // 5;
+          def loc: .locations[0] as $l
+            | (.locations[0].symbolic.key.Local.given_path // "?" | ltrimstr("/src/"))
+              + ":" + (($l.concrete.location.start_point.row + 1) | tostring);
+          if length == 0 then
+            "### 🌈 zizmor\n\n✅ No findings in GitHub Actions workflows."
+          else
+            ( group_by(.determinations.severity) | map({(.[0].determinations.severity): length}) | add ) as $counts
+            | "### 🌈 zizmor: \(length) finding\(if length == 1 then "" else "s" end)\n\n"
+              + ( ["High", "Medium", "Low", "Informational", "Unknown"]
+                  | map(select($counts[.] != null) | "**\($counts[.])** \(.)") | join(" · ") ) + "\n\n"
+              + "<details><summary>Full results</summary>\n\n"
+              + "| Severity | Confidence | Rule | Location | Description |\n|---|---|---|---|---|\n"
+              + ( sort_by([(.determinations.severity | rank), loc])
+                  | map("| \(.determinations.severity) | \(.determinations.confidence) | [\(.ident)](\(.url)) | `\(loc)` | \(.desc) |")
+                  | join("\n") )
+              + "\n\n</details>"
+          end
+          JQ
+          jq -r -f summary.jq findings.json > comment.md
+
+      - name: Post PR comment
+        if: always() && github.event_name == 'pull_request'
+        uses: marocchino/sticky-pull-request-comment@5770ad5eb8f42dd2c4f34da00c94c5381e49af88 # v3.0.5
+        with:
+          header: zizmor
+          path: comment.md
