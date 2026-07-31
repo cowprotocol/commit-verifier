@@ -39,7 +39,7 @@ jobs:
           GH_TOKEN: ${{ github.token }} # online audits, same as the action run
         run: |
           rc=0
-          docker run --rm -e GH_TOKEN -v "$PWD:/src" ghcr.io/zizmorcore/zizmor:1.28.0@sha256:87cec472e7fcbd62a3632fdf5af225f513936f4a1b6a8f6792fdd14498f285ee \
+          docker run --rm -e GH_TOKEN -v "$PWD:/src" ghcr.io/zizmorcore/zizmor:1.28.0@sha256:8e6b3e4fb74d1aa5d23e83ea369f386c66eced0d1fb944d32cd8b2aac100b00d \
             --format=json /src > findings.json || rc=$?
           # exit codes 10-14 = findings; anything else is a real error
           if [ "$rc" -ne 0 ] && { [ "$rc" -lt 10 ] || [ "$rc" -gt 14 ]; }; then exit "$rc"; fi
