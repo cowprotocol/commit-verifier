@@ -11,7 +11,7 @@ WORKDIR="$(mktemp -d)"
 trap 'rm -rf "$WORKDIR"' EXIT
 
 WEBFLOW_EMAIL="noreply@github.com"
-WEBFLOW_BOT_LOGINS=("renovate[bot]" "github-actions[bot]")
+WEBFLOW_BOT_LOGINS=("renovate[bot]" "github-actions[bot]" "cow-github-bot[bot]")
 ALLOWED_AUTOMATED_LOGINS=("cow-protocol")
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
