@@ -18,3 +18,4 @@ matei@cow.fi sk-ssh-ed25519@openssh.com AAAAGnNrLXNzaC1lZDI1NTE5QG9wZW5zc2guY29t
 
 # cow-protocol CI bot — non-sk software key
 gh_111@cow.fi ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIFHJQvdfBMMNNDCsq8LJS2/yCxYKbFiw6Jkcjym8CvZw
+aryangodara03@gmail.com sk-ssh-ed25519@openssh.com AAAAGnNrLXNzaC1lZDI1NTE5QG9wZW5zc2guY29tAAAAIMi8gbd4TavcdF+oxIY5McupFvHzIFBI31rC+Fz82Nh+AAAABHNzaDo= aryan@cow.fi commit signing
