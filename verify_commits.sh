@@ -42,7 +42,7 @@ in_allowed_signers_registry() {
     -n git -s "$signature_file" <"$payload_file" >/dev/null 2>&1
 }
 
-list_author_sk_fingerprints() {
+list_signer_sk_fingerprints() {
   local login="$1"
   local cache="$WORKDIR/fingerprints-$login"
   if [[ -f "$cache" ]]; then
@@ -101,24 +101,24 @@ signature_has_touch() {
 
 REASON=""
 check_commit_sk_signed() {
-  local author_login="$1"
-  local author_email="$2"
+  local committer_login="$1"
+  local committer_email="$2"
   local signature_file="$3"
   local payload_file="$4"
   REASON=""
 
-  if [[ -z "$author_login" ]]; then
-    REASON="author $author_email is not linked to any GitHub account"
+  if [[ -z "$committer_login" ]]; then
+    REASON="committer $committer_email is not linked to any GitHub account"
     return 1
   fi
 
-  local author_fingerprints
-  if ! author_fingerprints="$(list_author_sk_fingerprints "$author_login")"; then
-    REASON="could not fetch @$author_login's signing keys from GitHub"
+  local committer_fingerprints
+  if ! committer_fingerprints="$(list_signer_sk_fingerprints "$committer_login")"; then
+    REASON="could not fetch @$committer_login's signing keys from GitHub"
     return 1
   fi
-  if [[ -z "$author_fingerprints" ]]; then
-    REASON="@$author_login has no sk- (hardware-backed) signing key on GitHub"
+  if [[ -z "$committer_fingerprints" ]]; then
+    REASON="@$committer_login has no sk- (hardware-backed) signing key on GitHub"
     return 1
   fi
 
@@ -129,13 +129,13 @@ check_commit_sk_signed() {
     return 1
   fi
 
-  if ! printf '%s\n' "$author_fingerprints" | grep -qxF "$signer_fingerprint"; then
-    REASON="not signed by an sk- (hardware-backed) key belonging to @$author_login"
+  if ! printf '%s\n' "$committer_fingerprints" | grep -qxF "$signer_fingerprint"; then
+    REASON="not signed by an sk- (hardware-backed) key belonging to @$committer_login"
     return 1
   fi
 
-  if ! in_allowed_signers_registry "$author_email" "$signature_file" "$payload_file"; then
-    REASON="signing key is not enrolled in the allowed_signers registry for $author_email"
+  if ! in_allowed_signers_registry "$committer_email" "$signature_file" "$payload_file"; then
+    REASON="signing key is not enrolled in the allowed_signers registry for $committer_email"
     return 1
   fi
 
@@ -152,6 +152,7 @@ gh api --paginate "repos/$GITHUB_REPOSITORY/pulls/$PR_NUMBER/commits" \
   --jq '.[] | [
       .sha,
       (.author.login // ""),
+      (.committer.login // ""),
       .commit.author.email,
       .commit.committer.email,
       (.commit.verification.verified | tostring),
@@ -173,7 +174,7 @@ fi
 ok=0
 warned=0
 failed=0
-while IFS=$'\t' read -r sha author_login author_email committer_email verified signature_b64 payload_b64; do
+while IFS=$'\t' read -r sha author_login committer_login author_email committer_email verified signature_b64 payload_b64; do
   [[ -z "$sha" ]] && continue
   short_sha="${sha:0:9}"
 
@@ -187,8 +188,8 @@ while IFS=$'\t' read -r sha author_login author_email committer_email verified s
     exempt_reason="allowed automated account @$author_login"
   fi
 
-  if check_commit_sk_signed "$author_login" "$author_email" "$WORKDIR/sig" "$WORKDIR/payload"; then
-    echo "OK    $short_sha  @$author_login"
+  if check_commit_sk_signed "$committer_login" "$committer_email" "$WORKDIR/sig" "$WORKDIR/payload"; then
+    echo "OK    $short_sha  @$committer_login"
     ok=$((ok + 1))
   elif [[ -n "$exempt_reason" ]]; then
     echo "::warning::$short_sha: $REASON — not an sk- key, allowed ($exempt_reason)"
