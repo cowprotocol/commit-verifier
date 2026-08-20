@@ -2,6 +2,7 @@ name: verify commit signatures 🕵🏻‍♂️
 
 on:
   pull_request:
+  merge_group:
 
 permissions: {}
 
@@ -25,5 +26,5 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GITHUB_REPOSITORY: ${{ github.repository }}
-          PR: ${{ github.event.pull_request.number }}
-        run: ./verify_commits.sh "$PR"
+          TARGET: ${{ github.event.pull_request.number || github.event.merge_group.head_ref }}
+        run: ./verify_commits.sh "$TARGET"
