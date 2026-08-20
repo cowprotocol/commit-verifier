@@ -1,11 +1,26 @@
 #!/usr/bin/env bash
 # See README.md for what this checks, how it works, and its limits.
-# Usage: GH_TOKEN=... GITHUB_REPOSITORY=owner/repo verify_commits.sh <pr-number>
+# Usage: GH_TOKEN=... GITHUB_REPOSITORY=owner/repo verify_commits.sh <pr-number|merge-queue-ref>
 set -euo pipefail
 
 : "${GH_TOKEN:?GH_TOKEN required}"
 : "${GITHUB_REPOSITORY:?GITHUB_REPOSITORY required}"
-PR_NUMBER="${1:?usage: $0 <pr-number>}"
+TARGET="${1:?usage: $0 <pr-number|merge-queue-ref>}"
+
+case "$TARGET" in
+  */gh-readonly-queue/*)
+    PR_NUMBER="${TARGET##*/pr-}"
+    PR_NUMBER="${PR_NUMBER%%-*}"
+    ;;
+  *)
+    PR_NUMBER="$TARGET"
+    ;;
+esac
+
+if [[ ! "$PR_NUMBER" =~ ^[0-9]+$ ]]; then
+  echo "::error::could not resolve a pull request number from '$TARGET'"
+  exit 1
+fi
 
 WORKDIR="$(mktemp -d)"
 trap 'rm -rf "$WORKDIR"' EXIT
