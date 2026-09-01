@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # See README.md for what this checks, how it works, and its limits.
 # Usage: GH_TOKEN=... GITHUB_REPOSITORY=owner/repo verify_commits.sh <pr-number|merge-queue-ref>
+# Requires: gh, jq, ssh-keygen
 set -euo pipefail
 
 : "${GH_TOKEN:?GH_TOKEN required}"
@@ -26,24 +27,44 @@ WORKDIR="$(mktemp -d)"
 trap 'rm -rf "$WORKDIR"' EXIT
 
 WEBFLOW_EMAIL="noreply@github.com"
-WEBFLOW_BOT_LOGINS=("renovate[bot]" "github-actions[bot]" "cow-github-bot[bot]")
-ALLOWED_AUTOMATED_LOGINS=("cow-protocol")
+
+# "*" applies to every repository, the rest add to it. A bot listed nowhere
+# gets no exemption and fails like anyone else.
+ALLOWED_BOTS='{
+  "*":                          ["renovate[bot]"],
+  "cowprotocol/infrastructure": ["cow-github-bot[bot]"],
+  "cowprotocol/services":        ["cow-github-bot[bot]"]
+}'
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ALLOWED_SIGNERS_FILE="${ALLOWED_SIGNERS_FILE:-$SCRIPT_DIR/allowed_signers}"
 
 log() { printf '[verify-commits] %s\n' "$*" >&2; }
 
+if ! REPO_BOTS="$(jq -r --arg repo "$GITHUB_REPOSITORY" '(.["*"] // []) + (.[$repo] // []) | .[]' <<<"$ALLOWED_BOTS")"; then
+  echo "::error::ALLOWED_BOTS is not valid JSON"
+  exit 1
+fi
+if [[ -n "$REPO_BOTS" ]]; then
+  log "bots allowed on $GITHUB_REPOSITORY: ${REPO_BOTS//$'\n'/ }"
+else
+  log "no bots allowed on $GITHUB_REPOSITORY"
+fi
+
+is_allowed_bot() {
+  [[ -n "$1" && -n "$REPO_BOTS" ]] && grep -qxF "$1" <<<"$REPO_BOTS"
+}
+
 is_allowed_automated_account() {
   local author_login="$1" author_email="$2" signature_file="$3" payload_file="$4"
-  printf '%s\n' "${ALLOWED_AUTOMATED_LOGINS[@]}" | grep -qxF "$author_login" || return 1
+  is_allowed_bot "$author_login" || return 1
   in_allowed_signers_registry "$author_email" "$signature_file" "$payload_file"
 }
 
 is_verified_webflow() {
   local author_login="$1" committer_email="$2" verified="$3"
   [[ "$committer_email" == "$WEBFLOW_EMAIL" && "$verified" == "true" ]] || return 1
-  printf '%s\n' "${WEBFLOW_BOT_LOGINS[@]}" | grep -qxF "$author_login"
+  is_allowed_bot "$author_login"
 }
 
 fingerprint_of_key() {
