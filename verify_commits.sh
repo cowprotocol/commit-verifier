@@ -28,11 +28,12 @@ trap 'rm -rf "$WORKDIR"' EXIT
 
 WEBFLOW_EMAIL="noreply@github.com"
 
-# A repository with no entry gets no exemptions: its bot commits fail like anyone else's.
+# "*" applies to every repository, the rest add to it. A bot listed nowhere
+# gets no exemption and fails like anyone else.
 ALLOWED_BOTS='{
-  "cowprotocol/commit-verifier": ["renovate[bot]"],
-  "cowprotocol/infrastructure":  ["renovate[bot]", "cow-github-bot[bot]"],
-  "cowprotocol/services":        ["renovate[bot]"]
+  "*":                          ["renovate[bot]"],
+  "cowprotocol/infrastructure": ["cow-github-bot[bot]"],
+  "cowprotocol/services":        ["cow-github-bot[bot]"]
 }'
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -40,11 +41,15 @@ ALLOWED_SIGNERS_FILE="${ALLOWED_SIGNERS_FILE:-$SCRIPT_DIR/allowed_signers}"
 
 log() { printf '[verify-commits] %s\n' "$*" >&2; }
 
-if ! REPO_BOTS="$(jq -r --arg repo "$GITHUB_REPOSITORY" '.[$repo] // [] | .[]' <<<"$ALLOWED_BOTS")"; then
+if ! REPO_BOTS="$(jq -r --arg repo "$GITHUB_REPOSITORY" '(.["*"] // []) + (.[$repo] // []) | .[]' <<<"$ALLOWED_BOTS")"; then
   echo "::error::ALLOWED_BOTS is not valid JSON"
   exit 1
 fi
-[[ -n "$REPO_BOTS" ]] || log "no bots allowed on $GITHUB_REPOSITORY"
+if [[ -n "$REPO_BOTS" ]]; then
+  log "bots allowed on $GITHUB_REPOSITORY: ${REPO_BOTS//$'\n'/ }"
+else
+  log "no bots allowed on $GITHUB_REPOSITORY"
+fi
 
 is_allowed_bot() {
   [[ -n "$1" && -n "$REPO_BOTS" ]] && grep -qxF "$1" <<<"$REPO_BOTS"
