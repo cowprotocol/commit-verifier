@@ -33,7 +33,7 @@ WEBFLOW_EMAIL="noreply@github.com"
 ALLOWED_BOTS='{
   "*":                          ["renovate[bot]"],
   "cowprotocol/infrastructure": ["cow-github-bot[bot]"],
-  "cowprotocol/services":        ["cow-github-bot[bot]"],
+  "cowprotocol/services":       ["cow-github-bot[bot]"],
   "cowprotocol/token-lists":    ["cow-fe-token-list-updater[bot]"]
 }'
 
