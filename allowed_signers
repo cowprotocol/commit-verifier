@@ -1,6 +1,7 @@
 # Enrolled hardware (sk-) commit-signing keys — the trusted registry.
 assem@cow.fi sk-ssh-ed25519@openssh.com AAAAGnNrLXNzaC1lZDI1NTE5QG9wZW5zc2guY29tAAAAIPq6XpBwnJEBmey+fnfxR6Z1RXR084NfIy48v+J1DXk+AAAABHNzaDo=
 martin@cow.fi sk-ssh-ed25519@openssh.com AAAAGnNrLXNzaC1lZDI1NTE5QG9wZW5zc2guY29tAAAAIJy8+BZczJWLtb+f8KSX5IqZZgwMGBnBQMe4jU4VXzBuAAAABHNzaDo=
+martin@cow.fi sk-ssh-ed25519@openssh.com AAAAGnNrLXNzaC1lZDI1NTE5QG9wZW5zc2guY29tAAAAIHtkqoMAi6UBjE1FUwTmnNOL34ObXNSMnDbux5GXK2+hAAAABHNzaDo=
 hello@danielconstantin.net sk-ssh-ed25519@openssh.com AAAAGnNrLXNzaC1lZDI1NTE5QG9wZW5zc2guY29tAAAAICcOQMJNAhmk69W4fuod4eZdG+dHKzQZYBBHWtzi7f5jAAAADHNzaDpjb3ctbWFrbw==
 tiago@cow.fi sk-ssh-ed25519@openssh.com AAAAGnNrLXNzaC1lZDI1NTE5QG9wZW5zc2guY29tAAAAIOYCxHz1k98VvYsFw51oH66CAeUPXStm8Qy0rTD3zCEJAAAABHNzaDo=
 tiago@cow.fi sk-ssh-ed25519@openssh.com AAAAGnNrLXNzaC1lZDI1NTE5QG9wZW5zc2guY29tAAAAINvY1PTjaP0BkyDhU2OLFRnQcomPONH5HAEe1jSAKZIcAAAABHNzaDo=
