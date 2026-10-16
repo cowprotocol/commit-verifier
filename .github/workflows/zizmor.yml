@@ -26,7 +26,7 @@ jobs:
       # fails on findings; annotations cap at 10, the PR comment carries the full list
       # advanced-security off: no GHAS on this repo, SARIF upload would 403
       - name: Run zizmor
-        uses: zizmorcore/zizmor-action@6fc4b006235f201fdab3722e17240ab420d580e5 # v0.6.1
+        uses: zizmorcore/zizmor-action@cc914d7f3750a2d13d75c7f184a1060aa0e9d482 # v0.6.4
         with:
           version: "1.28.0"
           advanced-security: false
