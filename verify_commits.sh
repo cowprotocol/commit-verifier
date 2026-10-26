@@ -32,6 +32,7 @@ WEBFLOW_EMAIL="noreply@github.com"
 # gets no exemption and fails like anyone else.
 ALLOWED_BOTS='{
   "*":                          ["renovate[bot]"],
+  "cowprotocol/cow-dagster":    ["cow-github-bot[bot]"],
   "cowprotocol/infrastructure": ["cow-github-bot[bot]"],
   "cowprotocol/services":       ["cow-github-bot[bot]"],
   "cowprotocol/token-lists":    ["cow-fe-token-list-updater[bot]"]

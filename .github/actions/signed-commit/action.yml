@@ -1,0 +1,69 @@
+name: "Signed commit"
+description: "Commit the staged changes through the GraphQL API, so GitHub signs the commit as the app bot."
+
+inputs:
+  token:
+    description: "GitHub App installation token"
+    required: true
+  branch:
+    description: "Branch to commit on; created at the current HEAD when it does not exist yet"
+    required: true
+  message:
+    description: "Commit message; first line is the headline"
+    required: false
+    default: ""
+  message-file:
+    description: "File holding the commit message; takes precedence over message"
+    required: false
+    default: ""
+
+runs:
+  using: "composite"
+  steps:
+    - name: Create the signed commit
+      shell: bash
+      env:
+        GH_TOKEN: ${{ inputs.token }}
+        REPO: ${{ github.repository }}
+        BRANCH: ${{ inputs.branch }}
+        MESSAGE: ${{ inputs.message }}
+        MESSAGE_FILE: ${{ inputs.message-file }}
+      run: |
+        set -euo pipefail
+
+        git diff --cached --quiet && { echo "Nothing staged, no commit created"; exit 0; }
+
+        [ -z "$MESSAGE_FILE" ] || MESSAGE="$(cat "$MESSAGE_FILE")"
+        [ -n "$MESSAGE" ] || { echo "::error::message or message-file is required"; exit 1; }
+
+        base="$(git rev-parse HEAD)"
+        # createCommitOnBranch needs the branch to exist; the ref doubles as the
+        # expected head, so a branch that moved since checkout fails the mutation
+        gh api "repos/$REPO/git/ref/heads/$BRANCH" >/dev/null 2>&1 ||
+          gh api --method POST "repos/$REPO/git/refs" -f ref="refs/heads/$BRANCH" -f sha="$base" >/dev/null
+
+        # blobs go through files, not argv, so a large render cannot blow ARG_MAX
+        # -z keeps paths raw; core.quotePath would escape non-ascii ones
+        # --no-renames keeps a rename as delete + add, so the old path is removed
+        tmpdir="$(mktemp -d)"
+        git diff --cached --no-renames -z --name-only --diff-filter=d HEAD \
+          | while IFS= read -r -d '' p; do
+              git show :"$p" | base64 | tr -d '\n' >"$tmpdir/blob"
+              jq -nc --arg p "$p" --rawfile c "$tmpdir/blob" '{path: $p, contents: $c}'
+            done | jq -sc . >"$tmpdir/adds.json"
+        git diff --cached --no-renames -z --name-only --diff-filter=D HEAD \
+          | while IFS= read -r -d '' p; do
+              jq -nc --arg p "$p" '{path: $p}'
+            done | jq -sc . >"$tmpdir/dels.json"
+
+        jq -n --arg repo "$REPO" --arg branch "$BRANCH" --arg oid "$base" \
+              --arg headline "$(head -n1 <<<"$MESSAGE")" --arg body "$(tail -n+2 <<<"$MESSAGE")" \
+              --slurpfile adds "$tmpdir/adds.json" --slurpfile dels "$tmpdir/dels.json" '{
+          query: "mutation($i: CreateCommitOnBranchInput!){ createCommitOnBranch(input: $i){ commit { oid } } }",
+          variables: { i: {
+            branch: { repositoryNameWithOwner: $repo, branchName: $branch },
+            message: { headline: $headline, body: $body },
+            expectedHeadOid: $oid,
+            fileChanges: { additions: $adds[0], deletions: $dels[0] }
+          } }
+        }' | gh api graphql --input - --jq '.data.createCommitOnBranch.commit.oid'
